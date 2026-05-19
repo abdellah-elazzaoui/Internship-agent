@@ -1,6 +1,8 @@
 from fastmcp import FastMCP
+from fastmcp.exception import ToolError
 from llama_index.tools.google import GmailToolSpec
 from dotenv import load_dotenv
+from pypdf import PdfReader
 import datetime
 import os
 
@@ -33,3 +35,25 @@ def register_llama_tools(tool_list: list, label: str):
 
 register_llama_tools(gmail_tool_spec,"Gmail")
 
+
+@mcp.tool(name="get_specialized_resume",description="Selects and reads the text of the correct resume based on a topic string ('data', 'ai', or 'both')")
+def get_specialized_resume(topic:str):
+    """Dynamically pathways into the correct resume directory file."""
+    topic = str(topic).strip().lower()
+    file_mapping = {
+        "data": "../config/Abdellah_CV_Data.pdf",
+        "ai": "../config/Abdellah_CV_AI.pdf",
+        "both": "../config/Abdellah_Elazzaoui_CV.pdf"
+    }
+    target_path = file_mapping.get(topic,"../config/Abdellah_Elazzaoui_CV.pdf")
+    if not os.path.exists(target_path):
+        return ToolError(f"Error: Target resume file not found at path: {target_path}")
+    try:
+        reader = PdfReader(target_path)
+        text = "".join([page.extract_text() + "\n" for page in reader.pages]).strip()
+        return text
+    except Exception as e:
+        return f"Error parsing PDF file framework: {str(e)}"
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
